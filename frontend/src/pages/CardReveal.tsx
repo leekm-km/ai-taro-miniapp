@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useApp } from '@/store/AppContext'
+import { getCardImagePath } from '@/data/cardImages'
 
 export default function CardReveal() {
   const navigate = useNavigate()
@@ -21,7 +22,6 @@ export default function CardReveal() {
       setTimeout(() => setAllDone(true), 600)
       return
     }
-    // 카드 순차 공개: 0.5s 대기 → 뒤집기 → 0.3s → 다음
     const timer = setTimeout(() => {
       setFlipped((prev) => {
         const next = [...prev]
@@ -42,24 +42,15 @@ export default function CardReveal() {
         <p className="page-subtitle">당신이 선택한 카드들입니다</p>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-        }}
-      >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {selectedCards.map((selected, i) => {
           const isFlipped = flipped[i] ?? false
-          const isRevealed = i < revealedCount || (i === revealedCount && isFlipped)
+          const cardImagePath = getCardImagePath(selected.card.id)
 
           return (
             <div
               key={selected.card.id}
-              style={{
-                perspective: 1000,
-                height: 120,
-              }}
+              style={{ perspective: 1000, height: 140 }}
             >
               <motion.div
                 animate={{ rotateY: isFlipped ? 180 : 0 }}
@@ -83,11 +74,11 @@ export default function CardReveal() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 40,
-                    opacity: isRevealed ? 0.3 : 1,
+                    overflow: 'hidden',
                   }}
                 >
-                  🌙
+                  {/* 뒷면 패턴 */}
+                  <div style={{ opacity: 0.3, fontSize: 60, letterSpacing: 8 }}>✦ ✦ ✦</div>
                 </div>
 
                 {/* 카드 앞면 */}
@@ -100,39 +91,63 @@ export default function CardReveal() {
                     background: `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}22, #0d0d1a)`,
                     border: `1px solid ${persona?.color ?? '#6d235c'}66`,
                     borderRadius: 14,
-                    padding: 16,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 14,
+                    padding: 12,
+                    overflow: 'hidden',
                   }}
                 >
+                  {/* 카드 이미지 */}
                   <div
                     style={{
-                      width: 48,
-                      height: 64,
-                      background: `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}, #2a0a20)`,
-                      borderRadius: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 20,
+                      width: 72,
+                      height: 112,
                       flexShrink: 0,
+                      borderRadius: 8,
+                      overflow: 'hidden',
+                      background: `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}, #0d0d1a)`,
                       ...(selected.isReversed ? { transform: 'rotate(180deg)' } : {}),
                     }}
                   >
-                    🔮
+                    {cardImagePath ? (
+                      <img
+                        src={cardImagePath}
+                        alt={selected.card.korean_name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                          // 이미지 로드 실패 시 폴백
+                          e.currentTarget.style.display = 'none'
+                          e.currentTarget.parentElement!.style.background =
+                            `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}, #0d0d1a)`
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 28,
+                        }}
+                      >
+                        🔮
+                      </div>
+                    )}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        marginBottom: 4,
-                      }}
-                    >
+
+                  {/* 카드 정보 */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
                       {i + 1}. {selected.card.korean_name}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
                       {selected.card.name}
                     </div>
                     <div
@@ -144,9 +159,23 @@ export default function CardReveal() {
                         padding: '2px 8px',
                         fontSize: 11,
                         fontWeight: 600,
+                        marginBottom: 8,
                       }}
                     >
                       {selected.isReversed ? '역방향 ↓' : '정방향 ↑'}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--text-secondary)',
+                        lineHeight: 1.5,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {selected.card.keywords}
                     </div>
                   </div>
                 </div>

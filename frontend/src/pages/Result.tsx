@@ -13,14 +13,12 @@ export default function Result() {
     selectedCards,
     reading,
     conversationHistory,
-    addConversation,
-    setReading: updateReading,
+    addConversation: _addConversation,
     reset,
   } = useApp()
 
   const [showInput, setShowInput] = useState(false)
   const [followUpText, setFollowUpText] = useState('')
-  const [pendingQuestion, setPendingQuestion] = useState('')
 
   if (!persona || !category || !reading) {
     navigate('/')
@@ -34,15 +32,16 @@ export default function Result() {
 
   const handleSendFollowUp = () => {
     if (!followUpText.trim()) return
-    setPendingQuestion(followUpText.trim())
+    const q = followUpText.trim()
     setFollowUpText('')
-    navigate('/follow-up-ad', { state: { question: followUpText.trim() } })
+    navigate('/follow-up-ad', { state: { question: q } })
   }
 
   // reading을 세 부분으로 나눔 (캐릭터 이미지 삽입용)
   const readingParts = splitReading(reading)
-  // 캐릭터 이미지 랜덤 선택 (최대 3개, 중복 없이)
-  const images = getRandomImages(persona.imagePaths, 3)
+  // 첫 번째는 항상 캐릭터 대표 이미지, 나머지는 랜덤
+  const [firstImage, ...restImages] = persona.imagePaths
+  const images = [firstImage, ...getRandomImages(restImages, 2)]
 
   return (
     <div className="page" style={{ gap: 16 }}>
@@ -299,8 +298,6 @@ export default function Result() {
         </button>
       </div>
 
-      {/* pendingQuestion이 있으면 FollowUpAd로 보내는 로직은 navigate에서 처리 */}
-      {pendingQuestion && null}
     </div>
   )
 }

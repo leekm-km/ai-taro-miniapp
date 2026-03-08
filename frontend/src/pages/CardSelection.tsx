@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '@/store/AppContext'
 import type { TarotCard, SelectedCard } from '@/types'
-import tarotCards from '@/data/tarot_cards.json'
+import tarotCardsData from '@/data/tarot_cards.json'
 
 // 부채꼴 카드 배치 계산 (Flutter 로직 그대로)
 function getCardTransform(index: number, total: number) {
@@ -27,7 +27,7 @@ export default function CardSelection() {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
-  const allCards = useMemo(() => tarotCards as TarotCard[], [])
+  const allCards = useMemo(() => (tarotCardsData as { cards: TarotCard[] }).cards, [])
   const requiredCount = category?.cardCount ?? 3
 
   useEffect(() => {

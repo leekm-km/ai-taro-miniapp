@@ -13,18 +13,21 @@ export default function FollowUpAd() {
     selectedCards,
     conversationHistory,
     addConversation,
-    setReading,
   } = useApp()
 
-  const followUpQuestion = (location.state as { question?: string })?.question ?? ''
+  const followUpQuestion = (location.state as { question?: string } | null)?.question ?? ''
   const [countdown, setCountdown] = useState(3)
   const [canSkip, setCanSkip] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const doneRef = useRef(false)
+  const resultRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!persona || !category || !followUpQuestion) { navigate('/result'); return }
+    if (!persona || !category || !followUpQuestion) {
+      navigate('/result')
+      return
+    }
 
     const callApi = async () => {
       try {
@@ -36,12 +39,13 @@ export default function FollowUpAd() {
           selectedCards,
           conversationHistory,
         })
+        resultRef.current = reading
         addConversation({ role: 'user', content: followUpQuestion })
         addConversation({ role: 'assistant', content: reading })
-        setReading(reading)
         doneRef.current = true
       } catch (e) {
-        setError(`오류: ${e}`)
+        const msg = e instanceof Error ? e.message : String(e)
+        setError(msg)
       } finally {
         setIsLoading(false)
       }
@@ -53,7 +57,10 @@ export default function FollowUpAd() {
     const interval = setInterval(() => {
       count--
       setCountdown(count)
-      if (count <= 0) { clearInterval(interval); setCanSkip(true) }
+      if (count <= 0) {
+        clearInterval(interval)
+        setCanSkip(true)
+      }
     }, 1000)
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,12 +146,31 @@ export default function FollowUpAd() {
       )}
 
       {error && (
-        <div style={{ color: '#ff6b6b', textAlign: 'center', fontSize: 14 }}>
-          {error}
-          <br />
+        <div
+          style={{
+            color: '#ff6b6b',
+            textAlign: 'center',
+            fontSize: 13,
+            maxWidth: 320,
+            padding: '12px 16px',
+            background: 'rgba(255,0,0,0.1)',
+            borderRadius: 8,
+            border: '1px solid rgba(255,0,0,0.3)',
+          }}
+        >
+          <div style={{ marginBottom: 8, fontWeight: 600 }}>오류가 발생했어요</div>
+          <div style={{ fontSize: 11, color: '#ff9090', marginBottom: 12 }}>{error}</div>
           <button
             onClick={() => navigate('/result')}
-            style={{ marginTop: 12, color: 'var(--accent-gold)', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{
+              color: 'var(--accent-gold)',
+              background: 'none',
+              border: '1px solid var(--accent-gold)',
+              borderRadius: 6,
+              padding: '6px 16px',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
           >
             결과로 돌아가기
           </button>
