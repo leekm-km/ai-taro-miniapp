@@ -11,9 +11,12 @@ export default function AdPlaceholder() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const readingRef = useRef<string | null>(null)
+  const calledRef = useRef(false) // StrictMode 이중 호출 방지
 
   useEffect(() => {
     if (!persona || !category) { navigate('/'); return }
+    if (calledRef.current) return // 이미 호출됨 (StrictMode 방지)
+    calledRef.current = true
 
     // API 호출과 카운트다운 병렬 실행
     const callApi = async () => {
@@ -27,11 +30,15 @@ export default function AdPlaceholder() {
         })
         readingRef.current = reading
         setReading(reading)
-        // 대화 기록에 첫 번째 교환 추가
         addConversation({ role: 'user', content: question || '일반 타로 리딩' })
         addConversation({ role: 'assistant', content: reading })
       } catch (e) {
-        setError(`오류: ${e}`)
+        const msg = e instanceof Error ? e.message : String(e)
+        if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+          setError('서버에 연결할 수 없어요.\n백엔드가 실행 중인지 확인해주세요.\n(cd backend && uvicorn main:app --port 5000)')
+        } else {
+          setError(msg)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -65,6 +72,15 @@ export default function AdPlaceholder() {
     if (canSkip && !isLoading) {
       navigate('/result')
     }
+  }
+
+  const handleRetry = () => {
+    calledRef.current = false
+    setError(null)
+    setIsLoading(true)
+    setCanSkip(false)
+    setCountdown(3)
+    window.location.reload()
   }
 
   return (
@@ -104,20 +120,22 @@ export default function AdPlaceholder() {
       </div>
 
       {/* 카운트다운 */}
-      <div style={{ textAlign: 'center' }}>
-        {countdown > 0 ? (
-          <div style={{ fontSize: 48, fontWeight: 700, color: '#fff' }}>
-            {countdown}
-          </div>
-        ) : (
-          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-gold)' }}>
-            {isLoading ? '🔮 리딩 중...' : '준비됐어요!'}
-          </div>
-        )}
-      </div>
+      {!error && (
+        <div style={{ textAlign: 'center' }}>
+          {countdown > 0 ? (
+            <div style={{ fontSize: 48, fontWeight: 700, color: '#fff' }}>
+              {countdown}
+            </div>
+          ) : (
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-gold)' }}>
+              {isLoading ? '🔮 리딩 중...' : '준비됐어요!'}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 로딩 스피너 */}
-      {isLoading && (
+      {isLoading && !error && (
         <div
           style={{
             width: 32,
@@ -149,23 +167,61 @@ export default function AdPlaceholder() {
         </button>
       )}
 
+      {/* 에러 */}
       {error && (
-        <div style={{ color: '#ff6b6b', textAlign: 'center', fontSize: 14 }}>
-          {error}
-          <br />
-          <button
-            onClick={() => navigate('/')}
+        <div
+          style={{
+            background: '#1a0000',
+            border: '1px solid #ff4444',
+            borderRadius: 12,
+            padding: '20px 24px',
+            maxWidth: 360,
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+          <div
             style={{
-              marginTop: 12,
-              color: 'var(--accent-gold)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              textDecoration: 'underline',
+              color: '#ff8888',
+              fontSize: 13,
+              lineHeight: 1.7,
+              whiteSpace: 'pre-line',
+              marginBottom: 16,
             }}
           >
-            처음으로 돌아가기
-          </button>
+            {error}
+          </div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button
+              onClick={handleRetry}
+              style={{
+                background: 'var(--accent-gold)',
+                color: '#000',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 20px',
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              다시 시도
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                background: 'transparent',
+                color: '#888',
+                border: '1px solid #444',
+                borderRadius: 8,
+                padding: '10px 20px',
+                fontSize: 14,
+                cursor: 'pointer',
+              }}
+            >
+              처음으로
+            </button>
+          </div>
         </div>
       )}
 
