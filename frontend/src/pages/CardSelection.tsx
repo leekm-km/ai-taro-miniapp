@@ -6,6 +6,7 @@ import type { TarotCard, SelectedCard } from '@/types'
 import tarotCardsData from '@/data/tarot_cards.json'
 
 // 부채꼴 카드 배치 계산 (Flutter 로직 그대로)
+// Flutter: x = radius * sin(rad), y = 80 + radius*(1-cos(rad))
 function getCardTransform(index: number, total: number) {
   const maxAngle = 45
   const angleStep = total > 1 ? (maxAngle * 2) / (total - 1) : 0
@@ -32,7 +33,6 @@ export default function CardSelection() {
 
   useEffect(() => {
     if (!persona || !category) { navigate('/'); return }
-    // 78장 중 16장 랜덤 선택
     const shuffled = [...allCards].sort(() => Math.random() - 0.5)
     setDisplayCards(shuffled.slice(0, 16))
   }, [allCards, persona, category, navigate])
@@ -90,68 +90,97 @@ export default function CardSelection() {
           overflow: 'hidden',
         }}
       >
-        <div style={{ position: 'relative', width: '100%', height: 280 }}>
+        <div style={{ position: 'relative', width: '100%', height: 300 }}>
           {displayCards.map((card, index) => {
             const { angle, x, y } = getCardTransform(index, displayCards.length)
             const isSelected = selectedIndices.has(index)
             const isHovered = hoveredIndex === index
+            const isLifted = isSelected || isHovered
 
+            // ★ 핵심 수정: rotation은 외부 div(CSS)에서 처리
+            //   scale/opacity/translateY는 motion.div(Framer Motion)에서 처리
+            //   → CSS transform과 Framer Motion transform 충돌 방지
             return (
-              <motion.div
+              <div
                 key={card.id}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{
-                  delay: index * 0.04,
-                  type: 'spring',
-                  stiffness: 200,
-                  damping: 20,
-                }}
                 style={{
                   position: 'absolute',
                   left: `calc(50% + ${x}px - ${CARD_WIDTH / 2}px)`,
-                  bottom: `${-y + (isHovered || isSelected ? 15 : 0)}px`,
+                  top: `${y + 80}px`,
                   width: CARD_WIDTH,
                   height: CARD_HEIGHT,
+                  // rotation은 여기서만 CSS로 처리
                   transform: `rotate(${angle}deg)`,
-                  cursor: 'pointer',
+                  transformOrigin: 'bottom center',
                   zIndex: isSelected || isHovered ? 50 + index : index,
-                  transition: 'bottom 0.2s ease',
                 }}
-                onClick={() => handleCardClick(index)}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
               >
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: 8,
-                    border: `${isSelected ? 3 : isHovered ? 2 : 1.5}px solid ${
-                      isSelected
-                        ? persona?.color ?? 'var(--accent-gold)'
-                        : isHovered
-                        ? 'rgba(255,255,255,0.6)'
-                        : 'rgba(255,255,255,0.2)'
-                    }`,
-                    background: isSelected
-                      ? `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}, #2a0a20)`
-                      : 'linear-gradient(135deg, #1a1040, #0d0d2a)',
-                    boxShadow: isSelected
-                      ? `0 0 16px ${persona?.color ?? '#6d235c'}88, 0 4px 12px rgba(0,0,0,0.5)`
-                      : isHovered
-                      ? '0 8px 20px rgba(0,0,0,0.5)'
-                      : '0 4px 8px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 20,
-                    transition: 'all 0.2s',
+                <motion.div
+                  // Flutter: easeOutBack 커브 재현 → spring with overshoot
+                  initial={{ scale: 0, opacity: 0, y: 0 }}
+                  animate={{
+                    scale: 1,
+                    opacity: 1,
+                    // Flutter의 hover: translate(0, -15)
+                    y: isLifted ? -15 : 0,
                   }}
+                  transition={{
+                    scale: {
+                      delay: index * 0.04,         // Flutter: delay = index * 0.04
+                      type: 'spring',
+                      stiffness: 300,              // Flutter easeOutBack과 유사한 overshoot
+                      damping: 15,
+                      mass: 0.8,
+                    },
+                    opacity: {
+                      delay: index * 0.04,
+                      duration: 0.25,
+                    },
+                    y: {
+                      // hover/select 시 빠른 반응
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 25,
+                    },
+                  }}
+                  style={{ width: '100%', height: '100%', cursor: 'pointer' }}
+                  onClick={() => handleCardClick(index)}
+                  onHoverStart={() => setHoveredIndex(index)}
+                  onHoverEnd={() => setHoveredIndex(null)}
                 >
-                  {isSelected ? '✓' : '🌙'}
-                </div>
-              </motion.div>
+                  {/* 카드 본체 */}
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 8,
+                      border: `${isSelected ? 3 : isHovered ? 2 : 1.5}px solid ${
+                        isSelected
+                          ? (persona?.color ?? 'var(--accent-gold)')
+                          : isHovered
+                          ? 'rgba(255,255,255,0.6)'
+                          : 'rgba(255,255,255,0.2)'
+                      }`,
+                      background: isSelected
+                        ? `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}, #2a0a20)`
+                        : 'linear-gradient(135deg, #1a1040, #0d0d2a)',
+                      boxShadow: isSelected
+                        ? `0 0 18px ${persona?.color ?? '#6d235c'}99, 0 6px 16px rgba(0,0,0,0.6)`
+                        : isHovered
+                        ? '0 10px 24px rgba(0,0,0,0.6)'
+                        : '0 4px 8px rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 20,
+                      // ★ transition은 border/background/shadow 등 비-transform 속성만
+                      transition: 'border 0.15s, background 0.15s, box-shadow 0.15s',
+                    }}
+                  >
+                    {isSelected ? '✓' : '🌙'}
+                  </div>
+                </motion.div>
+              </div>
             )
           })}
         </div>
@@ -164,6 +193,7 @@ export default function CardSelection() {
             initial={{ y: 60, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 60, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             style={{ padding: '16px' }}
           >
             <button className="btn-primary" onClick={handleConfirm}>
