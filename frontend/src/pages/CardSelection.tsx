@@ -23,7 +23,7 @@ const CARD_HEIGHT = 96
 
 export default function CardSelection() {
   const navigate = useNavigate()
-  const { language, persona, category, setSelectedCards } = useApp()
+  const { persona, category, setSelectedCards } = useApp()
   const [displayCards, setDisplayCards] = useState<TarotCard[]>([])
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const [flippedIndices, setFlippedIndices] = useState<Set<number>>(new Set())
@@ -39,18 +39,11 @@ export default function CardSelection() {
 
   const handleCardClick = (index: number) => {
     setSelectedIndices((prev) => {
+      if (prev.has(index)) return prev // 선택 취소 불가
+      if (prev.size >= requiredCount) return prev
       const next = new Set(prev)
-      if (next.has(index)) {
-        next.delete(index)
-        setFlippedIndices((f) => {
-          const nf = new Set(f)
-          nf.delete(index)
-          return nf
-        })
-      } else if (next.size < requiredCount) {
-        next.add(index)
-        setFlippedIndices((f) => new Set([...f, index]))
-      }
+      next.add(index)
+      setFlippedIndices((f) => new Set([...f, index]))
       return next
     })
   }
@@ -78,7 +71,9 @@ export default function CardSelection() {
     >
       {/* 헤더 */}
       <div style={{ padding: '16px', textAlign: 'center' }}>
-        <div className="page-title" style={{ marginBottom: 4 }}>카드를 선택하세요</div>
+        <div className="page-title" style={{ marginBottom: 4, fontSize: 16 }}>
+          이루고 싶은 바를 상상하면서<br />신중히 카드를 고르세요
+        </div>
         <div className="page-subtitle" style={{ marginBottom: 0 }}>
           {selectedCount} / {requiredCount}장 선택됨
         </div>
@@ -146,8 +141,7 @@ export default function CardSelection() {
                   style={{
                     width: '100%',
                     height: '100%',
-                    cursor: 'pointer',
-                    // perspective는 flip 부모에 설정
+                    cursor: isSelected ? 'default' : 'pointer',
                     perspective: 500,
                   }}
                   onClick={() => handleCardClick(index)}
@@ -241,10 +235,7 @@ export default function CardSelection() {
             style={{ padding: '16px' }}
           >
             <button className="btn-primary" onClick={handleConfirm}>
-              {language === 'ko' && '카드 공개하기 ✨'}
-              {language === 'en' && 'Reveal Cards ✨'}
-              {language === 'zh' && '揭示牌 ✨'}
-              {language === 'th' && 'เปิดเผยไพ่ ✨'}
+              카드 공개하기 ✨
             </button>
           </motion.div>
         )}
