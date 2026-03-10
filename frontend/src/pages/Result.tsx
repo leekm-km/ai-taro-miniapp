@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Markdown from 'react-markdown'
@@ -55,10 +55,11 @@ export default function Result() {
   const [showInput, setShowInput] = useState(false)
   const [followUpText, setFollowUpText] = useState('')
 
-  if (!persona || !category || !reading) {
-    navigate('/')
-    return null
-  }
+  useEffect(() => {
+    if (!persona || !category || !reading) navigate('/')
+  }, [persona, category, reading, navigate])
+
+  if (!persona || !category || !reading) return null
 
   const parsed = parseReading(reading, selectedCards.length)
 

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Markdown from 'react-markdown'
@@ -46,10 +47,12 @@ export default function FollowUpResult() {
     followUpReading,
   } = useApp()
 
-  if (!persona || !category || !followUpReading || followUpCards.length === 0) {
-    navigate('/result')
-    return null
-  }
+  useEffect(() => {
+    if (!persona || !category || !followUpReading || followUpCards.length === 0)
+      navigate('/result')
+  }, [persona, category, followUpReading, followUpCards, navigate])
+
+  if (!persona || !category || !followUpReading || followUpCards.length === 0) return null
 
   const parsed = parseReading(followUpReading, followUpCards.length)
 

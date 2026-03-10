@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider } from '@/store/AppContext'
-import LanguageSelect from '@/pages/LanguageSelect'
 import CharacterSelect from '@/pages/CharacterSelect'
 import FortuneCategory from '@/pages/FortuneCategory'
 import QuestionInput from '@/pages/QuestionInput'
@@ -17,7 +16,7 @@ export default function App() {
     <AppProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LanguageSelect />} />
+          <Route path="/" element={<Navigate to="/character" replace />} />
           <Route path="/character" element={<CharacterSelect />} />
           <Route path="/category" element={<FortuneCategory />} />
           <Route path="/question" element={<QuestionInput />} />
