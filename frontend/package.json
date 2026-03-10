@@ -20,8 +20,10 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "sharp": "^0.34.5",
     "typescript": "~5.7.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "vite-plugin-image-optimizer": "^2.0.3"
   },
   "notes": {
     "toss-sdk": "앱인토스 콘솔 파트너 등록 후 '@apps-in-toss/web-framework' 설치 필요. npm registry 설정 후: npm install @apps-in-toss/web-framework"
