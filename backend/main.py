@@ -265,6 +265,34 @@ async def get_followup_reading(request: FollowUpRequest):
     }
     focus = category_focus.get(request.category, "전반적인 운세")
     
+    # 새로 뽑은 카드 정보 구성
+    cards_detail = ""
+    card_section_prompts = ""
+    has_reversed = False
+    if request.selected_cards:
+        cards_info = []
+        card_sections = []
+        for i, card in enumerate(request.selected_cards, 1):
+            orientation_text = "역방향" if card.orientation == "reversed" else "정방향"
+            if card.orientation == "reversed":
+                has_reversed = True
+            cards_info.append(
+                f"**카드 {i}**: {card.korean_name} ({card.name}) - {orientation_text}\n"
+                f"  그림: {card.visual_elements}\n"
+                f"  키워드: {card.keywords}\n"
+                f"  의미: {card.meaning}"
+            )
+            card_sections.append(
+                f"   [CARD_{i}]\n"
+                f"   - {card.korean_name}({orientation_text}) 해석 (150-250자 이상)\n"
+                f"   - 카드 이름과 방향을 자연스럽게 언급하세요\n"
+                f"   - 추가 질문의 맥락에서 이 카드가 전하는 메시지를 해석하세요\n"
+            )
+        cards_detail = "\n\n".join(cards_info)
+        card_section_prompts = "\n".join(card_sections)
+
+    reversed_guide = "\n\n**중요**: 역방향 카드가 포함되어 있습니다. 역방향 의미도 설명하세요." if has_reversed else ""
+
     system_prompt = f"""당신은 타로 리더 {persona['name_ko']} ({persona['name_en']})입니다.
 
 ## 캐릭터 정체성
@@ -276,23 +304,35 @@ async def get_followup_reading(request: FollowUpRequest):
 1. **말투 엄수**: {persona['name_ko']}의 독특한 말투를 정확히 유지하세요.
 2. **언어**: {request.language} 언어로만 답변하세요.
 3. **초점**: {focus}에 집중하여 해석하세요.
-4. **대화 흐름**: 이전 대화를 참고하여 자연스럽게 이어가세요.
-5. **답변 형식**: 자연스러운 대화체로 작성하세요. 마크다운 헤더나 구조화된 형식을 사용하지 마세요.
-6. **답변 길이**: 500-800자 정도의 충분한 답변을 제공하세요.
+4. **이전 대화 연속성**: 이전 리딩의 흐름을 자연스럽게 이어가세요. 새 카드가 추가 질문에 어떤 답을 주는지 연결하세요.
+5. **새 카드 정보**:
+{cards_detail}{reversed_guide}
 
-**중요**: 
-- 답변은 반드시 {persona['name_ko']} 캐릭터의 독특한 말투가 명확히 드러나야 합니다
-- 이전 대화 맥락을 고려하여 연속성 있는 답변을 제공하세요
-- 자연스럽게 대화하듯이 답변하세요"""
+6. **답변 구조 (반드시 아래 구분자 태그를 그대로 사용할 것)**:
+
+   [INTRO]
+   - 추가 질문을 받았음을 언급하고, 새로운 카드 {len(request.selected_cards)}장을 뽑았음을 자연스럽게 말하세요 (100-150자)
+   - 이전 리딩과의 연결성을 언급하세요
+
+{card_section_prompts}
+   [SUMMARY]
+   - 새 카드들이 추가 질문에 대해 전하는 종합 메시지 (200-300자 이상)
+   - 이전 리딩과 연결하여 전체적인 그림을 그려주세요
+   - 구체적이고 실천 가능한 조언으로 마무리하세요
+
+   **중요**: 각 섹션 시작 시 반드시 [INTRO], [CARD_1], [CARD_2] ... [SUMMARY] 태그를 새 줄에 단독으로 작성하세요.
+
+7. **마크다운 서식 활용**: **굵은 글씨**로 핵심 메시지를 강조하세요.
+8. **답변 길이**: 총 800자 이상의 충분한 답변을 작성하세요."""
 
     messages = [{"role": "system", "content": system_prompt}]
-    
+
     for msg in request.conversation_history:
         messages.append(msg)
-    
+
     messages.append({
         "role": "user",
-        "content": f"{request.question}"
+        "content": f"추가 질문: {request.question}\n\n새로 뽑은 카드 {len(request.selected_cards)}장을 바탕으로 위 추가 질문에 대해 리딩해주세요."
     })
 
     try:

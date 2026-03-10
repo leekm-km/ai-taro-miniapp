@@ -23,13 +23,13 @@ const CARD_HEIGHT = 96
 
 export default function CardSelection() {
   const navigate = useNavigate()
-  const { persona, category, setSelectedCards } = useApp()
+  const { persona, category, setSelectedCards, setFollowUpCards, followUpMode } = useApp()
   const [displayCards, setDisplayCards] = useState<TarotCard[]>([])
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const [flippedIndices, setFlippedIndices] = useState<Set<number>>(new Set())
 
   const allCards = useMemo(() => (tarotCardsData as { cards: TarotCard[] }).cards, [])
-  const requiredCount = category?.cardCount ?? 3
+  const requiredCount = followUpMode ? 3 : (category?.cardCount ?? 3)
 
   useEffect(() => {
     if (!persona || !category) { navigate('/'); return }
@@ -53,8 +53,13 @@ export default function CardSelection() {
       card: displayCards[i],
       isReversed: Math.random() < 0.3,
     }))
-    setSelectedCards(selected)
-    navigate('/card-reveal')
+    if (followUpMode) {
+      setFollowUpCards(selected)
+      navigate('/follow-up-card-reveal')
+    } else {
+      setSelectedCards(selected)
+      navigate('/card-reveal')
+    }
   }
 
   const selectedCount = selectedIndices.size
@@ -72,7 +77,9 @@ export default function CardSelection() {
       {/* 헤더 */}
       <div style={{ padding: '16px', textAlign: 'center' }}>
         <div className="page-title" style={{ marginBottom: 4, fontSize: 16 }}>
-          이루고 싶은 바를 상상하면서<br />신중히 카드를 고르세요
+          {followUpMode
+            ? <>추가 질문을 위해<br />카드 {requiredCount}장을 고르세요</>
+            : <>이루고 싶은 바를 상상하면서<br />신중히 카드를 고르세요</>}
         </div>
         <div className="page-subtitle" style={{ marginBottom: 0 }}>
           {selectedCount} / {requiredCount}장 선택됨

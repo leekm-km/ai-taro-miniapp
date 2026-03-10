@@ -24,6 +24,7 @@ interface AppState {
   followUpQuestion: string
   followUpCards: SelectedCard[]
   followUpReading: string
+  followUpMode: boolean
 }
 
 interface AppContextValue extends AppState {
@@ -38,6 +39,7 @@ interface AppContextValue extends AppState {
   setFollowUpQuestion: (q: string) => void
   setFollowUpCards: (cards: SelectedCard[]) => void
   setFollowUpReading: (r: string) => void
+  setFollowUpMode: (mode: boolean) => void
   reset: () => void
 }
 
@@ -55,6 +57,7 @@ const initialState: AppState = {
   followUpQuestion: '',
   followUpCards: [],
   followUpReading: '',
+  followUpMode: false,
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -85,6 +88,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, followUpCards }))
   const setFollowUpReading = (followUpReading: string) =>
     setState((s) => ({ ...s, followUpReading }))
+  const setFollowUpMode = (followUpMode: boolean) =>
+    setState((s) => ({ ...s, followUpMode }))
   const reset = () => setState(initialState)
 
   return (
@@ -102,6 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setFollowUpQuestion,
         setFollowUpCards,
         setFollowUpReading,
+        setFollowUpMode,
         reset,
       }}
     >
