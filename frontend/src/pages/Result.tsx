@@ -238,12 +238,15 @@ export default function Result() {
           >
             <div
               style={{
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 700,
-                color: persona.color,
-                letterSpacing: 1,
-                marginBottom: 12,
-                textTransform: 'uppercase',
+                color: '#fff',
+                letterSpacing: 2,
+                marginBottom: 14,
+                padding: '8px 14px',
+                background: persona.color,
+                borderRadius: 8,
+                display: 'inline-block',
               }}
             >
               ✦ 종합 해석

@@ -6,7 +6,7 @@ const BASE = '/assets/tarot_cards'
 
 export const CARD_IMAGE_MAP: Record<string, string> = {
   // ── Major Arcana ──────────────────────────────────────────────────────
-  // major_0 (The Fool) → 이미지 없음, 폴백 처리
+  major_0:  `${BASE}/card_major_00_the_fool_v01.jpg`,
   major_1:  `${BASE}/card_major_01_the_magician_v01.png`,
   major_2:  `${BASE}/card_major_02_the_high_priestess_v01.jpg`,
   major_3:  `${BASE}/card_major_03_the_empress_v01.png`,

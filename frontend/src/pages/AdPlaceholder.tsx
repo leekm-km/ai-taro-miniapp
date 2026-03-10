@@ -128,8 +128,8 @@ export default function AdPlaceholder() {
               {countdown}
             </div>
           ) : (
-            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-gold)' }}>
-              {isLoading ? '🔮 리딩 중...' : '준비됐어요!'}
+            <div style={{ fontSize: isLoading ? 15 : 24, fontWeight: 700, color: 'var(--accent-gold)', whiteSpace: 'pre-line', lineHeight: 1.7 }}>
+              {isLoading ? '당신의 카드를 신중히 리딩하고 있어요.\n잠시만 기다려주세요.' : '준비됐어요!'}
             </div>
           )}
         </div>
