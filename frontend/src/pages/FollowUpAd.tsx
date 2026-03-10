@@ -1,7 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useApp } from '@/store/AppContext'
-import { fetchFollowUpReading } from '@/data/api'
+import { fetchTarotReading } from '@/data/api'
+import tarotCards from '@/data/tarot_cards.json'
+import type { SelectedCard, TarotCard } from '@/types'
+
+function pickRandomCards(count: number, excludeIds: string[]): SelectedCard[] {
+  const available = (tarotCards.cards as TarotCard[]).filter(
+    (c) => !excludeIds.includes(c.id)
+  )
+  const shuffled = [...available].sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, count).map((card) => ({
+    card,
+    isReversed: Math.random() < 0.3,
+  }))
+}
 
 export default function FollowUpAd() {
   const navigate = useNavigate()
@@ -11,17 +24,20 @@ export default function FollowUpAd() {
     category,
     language,
     selectedCards,
-    conversationHistory,
-    addConversation,
+    setFollowUpQuestion,
+    setFollowUpCards,
+    setFollowUpReading,
   } = useApp()
 
-  const followUpQuestion = (location.state as { question?: string } | null)?.question ?? ''
+  const followUpQuestion =
+    (location.state as { question?: string } | null)?.question ?? ''
+
   const [countdown, setCountdown] = useState(3)
   const [canSkip, setCanSkip] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const calledRef = useRef(false)
   const doneRef = useRef(false)
-  const resultRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!persona || !category || !followUpQuestion) {
@@ -29,31 +45,36 @@ export default function FollowUpAd() {
       return
     }
 
-    const callApi = async () => {
-      try {
-        const reading = await fetchFollowUpReading({
-          character: persona.id,
-          language,
-          category: category.id,
-          question: followUpQuestion,
-          selectedCards,
-          conversationHistory,
-        })
-        resultRef.current = reading
-        addConversation({ role: 'user', content: followUpQuestion })
-        addConversation({ role: 'assistant', content: reading })
-        doneRef.current = true
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e)
-        setError(msg)
-      } finally {
-        setIsLoading(false)
+    if (!calledRef.current) {
+      calledRef.current = true
+      setFollowUpQuestion(followUpQuestion)
+
+      const newCards = pickRandomCards(3, selectedCards.map((sc) => sc.card.id))
+      setFollowUpCards(newCards)
+
+      const callApi = async () => {
+        try {
+          const reading = await fetchTarotReading({
+            character: persona.id,
+            language,
+            category: category.id,
+            question: followUpQuestion,
+            selectedCards: newCards,
+          })
+          setFollowUpReading(reading)
+          doneRef.current = true
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e)
+          setError(msg)
+        } finally {
+          setIsLoading(false)
+        }
       }
+      callApi()
     }
 
-    callApi()
-
     let count = 3
+    setCountdown(3)
     const interval = setInterval(() => {
       count--
       setCountdown(count)
@@ -68,7 +89,7 @@ export default function FollowUpAd() {
 
   useEffect(() => {
     if (canSkip && !isLoading && doneRef.current) {
-      navigate('/result')
+      navigate('/follow-up-result')
     }
   }, [canSkip, isLoading, navigate])
 
@@ -85,6 +106,7 @@ export default function FollowUpAd() {
         padding: 24,
       }}
     >
+      {/* 광고 플레이스홀더 */}
       <div
         style={{
           width: '100%',
@@ -102,19 +124,28 @@ export default function FollowUpAd() {
       >
         <div style={{ fontSize: 64 }}>▶</div>
         <div style={{ color: '#666', fontSize: 14 }}>광고 플레이스홀더</div>
+        <div style={{ color: '#444', fontSize: 12 }}>
+          (앱인토스 콘솔에서 실제 광고 연동)
+        </div>
       </div>
 
-      <div style={{ textAlign: 'center' }}>
-        {countdown > 0 ? (
-          <div style={{ fontSize: 48, fontWeight: 700, color: '#fff' }}>{countdown}</div>
-        ) : (
-          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-gold)' }}>
-            {isLoading ? '🔮 답변 준비 중...' : '준비됐어요!'}
-          </div>
-        )}
-      </div>
+      {/* 카운트다운 */}
+      {!error && (
+        <div style={{ textAlign: 'center' }}>
+          {countdown > 0 ? (
+            <div style={{ fontSize: 48, fontWeight: 700, color: '#fff' }}>
+              {countdown}
+            </div>
+          ) : (
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-gold)' }}>
+              {isLoading ? '🔮 카드 해석 중...' : '준비됐어요!'}
+            </div>
+          )}
+        </div>
+      )}
 
-      {isLoading && (
+      {/* 로딩 스피너 */}
+      {isLoading && !error && (
         <div
           style={{
             width: 32,
@@ -127,9 +158,10 @@ export default function FollowUpAd() {
         />
       )}
 
+      {/* Skip 버튼 */}
       {canSkip && !isLoading && !error && (
         <button
-          onClick={() => navigate('/result')}
+          onClick={() => navigate('/follow-up-result')}
           style={{
             background: 'var(--accent-gold)',
             color: '#000',
@@ -145,6 +177,7 @@ export default function FollowUpAd() {
         </button>
       )}
 
+      {/* 에러 */}
       {error && (
         <div
           style={{

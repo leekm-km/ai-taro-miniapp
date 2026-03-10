@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '@/store/AppContext'
 import type { TarotCard, SelectedCard } from '@/types'
 import tarotCardsData from '@/data/tarot_cards.json'
+import { getCardImagePath } from '@/data/cardImages'
 
-// 부채꼴 카드 배치 계산 (Flutter 로직 그대로)
-// Flutter: x = radius * sin(rad), y = 80 + radius*(1-cos(rad))
+// 부채꼴 카드 배치 계산
 function getCardTransform(index: number, total: number) {
   const maxAngle = 45
   const angleStep = total > 1 ? (maxAngle * 2) / (total - 1) : 0
@@ -26,7 +26,7 @@ export default function CardSelection() {
   const { language, persona, category, setSelectedCards } = useApp()
   const [displayCards, setDisplayCards] = useState<TarotCard[]>([])
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const [flippedIndices, setFlippedIndices] = useState<Set<number>>(new Set())
 
   const allCards = useMemo(() => (tarotCardsData as { cards: TarotCard[] }).cards, [])
   const requiredCount = category?.cardCount ?? 3
@@ -42,8 +42,14 @@ export default function CardSelection() {
       const next = new Set(prev)
       if (next.has(index)) {
         next.delete(index)
+        setFlippedIndices((f) => {
+          const nf = new Set(f)
+          nf.delete(index)
+          return nf
+        })
       } else if (next.size < requiredCount) {
         next.add(index)
+        setFlippedIndices((f) => new Set([...f, index]))
       }
       return next
     })
@@ -94,12 +100,9 @@ export default function CardSelection() {
           {displayCards.map((card, index) => {
             const { angle, x, y } = getCardTransform(index, displayCards.length)
             const isSelected = selectedIndices.has(index)
-            const isHovered = hoveredIndex === index
-            const isLifted = isSelected || isHovered
+            const isFlipped = flippedIndices.has(index)
+            const cardImagePath = getCardImagePath(card.id)
 
-            // ★ 핵심 수정: rotation은 외부 div(CSS)에서 처리
-            //   scale/opacity/translateY는 motion.div(Framer Motion)에서 처리
-            //   → CSS transform과 Framer Motion transform 충돌 방지
             return (
               <div
                 key={card.id}
@@ -109,76 +112,117 @@ export default function CardSelection() {
                   top: `${y + 80}px`,
                   width: CARD_WIDTH,
                   height: CARD_HEIGHT,
-                  // rotation은 여기서만 CSS로 처리
+                  // 부채꼴 회전은 CSS에서만 처리
                   transform: `rotate(${angle}deg)`,
                   transformOrigin: 'bottom center',
-                  zIndex: isSelected || isHovered ? 50 + index : index,
+                  zIndex: isSelected ? 100 + index : index,
                 }}
               >
+                {/* 등장 + 선택 시 들어올리기 애니메이션 */}
                 <motion.div
-                  // Flutter: easeOutBack 커브 재현 → spring with overshoot
-                  initial={{ scale: 0, opacity: 0, y: 0 }}
+                  initial={{ scale: 0.5, opacity: 0 }}
                   animate={{
                     scale: 1,
                     opacity: 1,
-                    // Flutter의 hover: translate(0, -15)
-                    y: isLifted ? -15 : 0,
+                    y: isSelected ? -20 : 0,
                   }}
                   transition={{
                     scale: {
-                      delay: index * 0.04,         // Flutter: delay = index * 0.04
+                      delay: index * 0.04,
                       type: 'spring',
-                      stiffness: 300,              // Flutter easeOutBack과 유사한 overshoot
-                      damping: 15,
-                      mass: 0.8,
+                      stiffness: 260,
+                      damping: 20,
                     },
                     opacity: {
                       delay: index * 0.04,
-                      duration: 0.25,
+                      duration: 0.3,
                     },
                     y: {
-                      // hover/select 시 빠른 반응
                       type: 'spring',
                       stiffness: 400,
                       damping: 25,
                     },
                   }}
-                  style={{ width: '100%', height: '100%', cursor: 'pointer' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'pointer',
+                    // perspective는 flip 부모에 설정
+                    perspective: 500,
+                  }}
                   onClick={() => handleCardClick(index)}
-                  onHoverStart={() => setHoveredIndex(index)}
-                  onHoverEnd={() => setHoveredIndex(null)}
                 >
-                  {/* 카드 본체 */}
-                  <div
+                  {/* 3D flip 컨테이너 */}
+                  <motion.div
+                    animate={{ rotateY: isFlipped ? 180 : 0 }}
+                    transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
                     style={{
+                      position: 'relative',
                       width: '100%',
                       height: '100%',
-                      borderRadius: 8,
-                      border: `${isSelected ? 3 : isHovered ? 2 : 1.5}px solid ${
-                        isSelected
-                          ? (persona?.color ?? 'var(--accent-gold)')
-                          : isHovered
-                          ? 'rgba(255,255,255,0.6)'
-                          : 'rgba(255,255,255,0.2)'
-                      }`,
-                      background: isSelected
-                        ? `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}, #2a0a20)`
-                        : 'linear-gradient(135deg, #1a1040, #0d0d2a)',
-                      boxShadow: isSelected
-                        ? `0 0 18px ${persona?.color ?? '#6d235c'}99, 0 6px 16px rgba(0,0,0,0.6)`
-                        : isHovered
-                        ? '0 10px 24px rgba(0,0,0,0.6)'
-                        : '0 4px 8px rgba(0,0,0,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 20,
-                      // ★ transition은 border/background/shadow 등 비-transform 속성만
-                      transition: 'border 0.15s, background 0.15s, box-shadow 0.15s',
+                      transformStyle: 'preserve-3d',
                     }}
                   >
-                    {isSelected ? '✓' : '🌙'}
-                  </div>
+                    {/* 카드 뒷면 */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        borderRadius: 8,
+                        border: '1.5px solid rgba(255,255,255,0.2)',
+                        background: 'linear-gradient(135deg, #1a1040, #0d0d2a)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 20,
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      🌙
+                    </div>
+
+                    {/* 카드 앞면 (이미지) */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        borderRadius: 8,
+                        border: `2px solid ${persona?.color ?? 'var(--accent-gold)'}`,
+                        background: `linear-gradient(135deg, ${persona?.color ?? '#6d235c'}33, #0d0d1a)`,
+                        overflow: 'hidden',
+                        boxShadow: `0 0 14px ${persona?.color ?? '#6d235c'}99, 0 6px 14px rgba(0,0,0,0.5)`,
+                      }}
+                    >
+                      {cardImagePath ? (
+                        <img
+                          src={cardImagePath}
+                          alt={card.korean_name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 22,
+                          }}
+                        >
+                          🔮
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
                 </motion.div>
               </div>
             )

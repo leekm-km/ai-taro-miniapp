@@ -94,18 +94,23 @@ async def get_tarot_reading(request: TarotRequest):
     
     persona = PERSONAS[request.character]
     
-    # OpenAI 클라이언트 생성
-    api_key = os.getenv("OPENAI_API_KEY")
+    # Gemini 클라이언트 (OpenAI 호환 엔드포인트)
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-    
-    client = OpenAI(api_key=api_key)
-    
+        raise HTTPException(status_code=500, detail="Gemini API key not configured")
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+
     # 선택된 카드 정보 상세 구성
     cards_detail = ""
+    card_section_prompts = ""
     has_reversed = False
     if request.selected_cards:
         cards_info = []
+        card_sections = []
         for i, card in enumerate(request.selected_cards, 1):
             orientation_text = "역방향" if card.orientation == "reversed" else "정방향"
             if card.orientation == "reversed":
@@ -116,7 +121,16 @@ async def get_tarot_reading(request: TarotRequest):
                 f"  키워드: {card.keywords}\n"
                 f"  의미: {card.meaning}"
             )
+            card_sections.append(
+                f"   [CARD_{i}]\n"
+                f"   - {card.korean_name}({orientation_text}) 해석 (200-300자 이상)\n"
+                f"   - 카드 이름과 방향을 자연스럽게 언급하세요\n"
+                f"   - 카드에 그려진 이미지를 구체적으로 묘사하세요\n"
+                f"   - 카드의 상징과 의미를 상세히 설명하세요\n"
+                f"   - {request.category} 관점에서 구체적인 해석을 제공하세요\n"
+            )
         cards_detail = "\n\n".join(cards_info)
+        card_section_prompts = "\n".join(card_sections)
     
     # 카테고리별 초점
     category_focus = {
@@ -157,26 +171,21 @@ async def get_tarot_reading(request: TarotRequest):
 
 4. **초점**: {focus}에 집중하여 해석하세요.
 
-5. **답변 구조 (자연스러운 대화 흐름으로)**:
-   
-   **인사말 (200-300자)**:
-   - 자기소개를 포함한 따뜻한 인사말로 시작하세요
+5. **답변 구조 (반드시 아래 구분자 태그를 그대로 사용할 것)**:
+
+   [INTRO]
+   - 자기소개를 포함한 따뜻한 인사말로 시작하세요 (200-300자)
    - 만나서 반갑다는 인사와 함께 질문자를 환영하세요
    - 어떤 카드들을 뽑았는지 간단히 언급하세요
    - 사용자의 질문에 대해 공감하고 답변할 준비가 되었음을 표현하세요
-   
-   **각 카드 해석 (각 200-300자 이상)**:
-   - 카드 이름과 방향(정방향/역방향)을 자연스럽게 언급하세요
-   - **카드 그림 묘사**: 카드에 그려진 이미지를 구체적으로 설명하세요 
-     (예: "완드 두 개가 교차하고 있죠?", "컵들이 쏟아지는 모습이 보입니다")
-   - 카드의 상징과 의미를 상세히 설명하세요
-   - {request.category} 관점에서 구체적인 해석을 제공하세요
-   - 이전 카드들과의 연관성을 자연스럽게 연결하세요
-   
-   **종합 해석 (300-400자 이상)**:
-   - 모든 카드가 함께 전하는 전체적인 메시지를 하나의 이야기로 엮으세요
+
+{card_section_prompts}
+   [SUMMARY]
+   - 모든 카드가 함께 전하는 전체적인 메시지를 하나의 이야기로 엮으세요 (300-400자 이상)
    - {request.category}에 대한 종합적인 전망과 깊이 있는 통찰을 제공하세요
    - 구체적이고 실천 가능한 조언으로 마무리하세요
+
+   **중요**: 각 섹션 시작 시 반드시 [INTRO], [CARD_1], [CARD_2] ... [SUMMARY] 태그를 새 줄에 단독으로 작성하세요.
 
 6. **답변 길이**: 
    - 총 1200자 이상의 상세한 답변을 작성하세요
@@ -203,7 +212,7 @@ async def get_tarot_reading(request: TarotRequest):
     try:
         # OpenAI API 호출
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gemini-2.5-flash",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -229,12 +238,15 @@ async def get_followup_reading(request: FollowUpRequest):
     
     persona = PERSONAS[request.character]
     
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-    
-    client = OpenAI(api_key=api_key)
-    
+        raise HTTPException(status_code=500, detail="Gemini API key not configured")
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+
     category_focus = {
         "general": "종합적인 운세와 전반적인 흐름",
         "wealth": "재물운과 금전적 상황, 투자나 수입에 대한 조언",
@@ -279,7 +291,7 @@ async def get_followup_reading(request: FollowUpRequest):
 
     try:
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gemini-2.5-flash",
             messages=messages,  # type: ignore
             temperature=0.7
         )
@@ -295,15 +307,8 @@ async def get_followup_reading(request: FollowUpRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
 
-# Flutter 웹 정적 파일 서빙 설정
-# 배포 환경을 고려한 절대 경로 설정
-repl_home = os.getenv("REPL_HOME")
-if repl_home:
-    # Replit 환경
-    web_build_path = os.path.join(repl_home, "ai_taro_oppa", "build", "web")
-else:
-    # 로컬 개발 환경
-    web_build_path = os.path.join(os.path.dirname(__file__), "..", "build", "web")
+# Vite 빌드 정적 파일 서빙
+web_build_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
 # 정적 파일 제공 (assets, js 등)
 if os.path.exists(web_build_path):

@@ -21,6 +21,9 @@ interface AppState {
   reading: string
   conversationHistory: ConversationMessage[]
   usedImages: string[]
+  followUpQuestion: string
+  followUpCards: SelectedCard[]
+  followUpReading: string
 }
 
 interface AppContextValue extends AppState {
@@ -32,6 +35,9 @@ interface AppContextValue extends AppState {
   setReading: (reading: string) => void
   addConversation: (msg: ConversationMessage) => void
   addUsedImage: (path: string) => void
+  setFollowUpQuestion: (q: string) => void
+  setFollowUpCards: (cards: SelectedCard[]) => void
+  setFollowUpReading: (r: string) => void
   reset: () => void
 }
 
@@ -46,6 +52,9 @@ const initialState: AppState = {
   reading: '',
   conversationHistory: [],
   usedImages: [],
+  followUpQuestion: '',
+  followUpCards: [],
+  followUpReading: '',
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -70,6 +79,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   const addUsedImage = (path: string) =>
     setState((s) => ({ ...s, usedImages: [...s.usedImages, path] }))
+  const setFollowUpQuestion = (followUpQuestion: string) =>
+    setState((s) => ({ ...s, followUpQuestion }))
+  const setFollowUpCards = (followUpCards: SelectedCard[]) =>
+    setState((s) => ({ ...s, followUpCards }))
+  const setFollowUpReading = (followUpReading: string) =>
+    setState((s) => ({ ...s, followUpReading }))
   const reset = () => setState(initialState)
 
   return (
@@ -84,6 +99,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setReading,
         addConversation,
         addUsedImage,
+        setFollowUpQuestion,
+        setFollowUpCards,
+        setFollowUpReading,
         reset,
       }}
     >

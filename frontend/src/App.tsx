@@ -9,6 +9,7 @@ import CardReveal from '@/pages/CardReveal'
 import AdPlaceholder from '@/pages/AdPlaceholder'
 import Result from '@/pages/Result'
 import FollowUpAd from '@/pages/FollowUpAd'
+import FollowUpResult from '@/pages/FollowUpResult'
 import '@/styles/global.css'
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/ad" element={<AdPlaceholder />} />
           <Route path="/result" element={<Result />} />
           <Route path="/follow-up-ad" element={<FollowUpAd />} />
+          <Route path="/follow-up-result" element={<FollowUpResult />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

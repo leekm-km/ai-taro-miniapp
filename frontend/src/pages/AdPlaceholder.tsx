@@ -15,39 +15,40 @@ export default function AdPlaceholder() {
 
   useEffect(() => {
     if (!persona || !category) { navigate('/'); return }
-    if (calledRef.current) return // 이미 호출됨 (StrictMode 방지)
-    calledRef.current = true
 
-    // API 호출과 카운트다운 병렬 실행
-    const callApi = async () => {
-      try {
-        const reading = await fetchTarotReading({
-          character: persona.id,
-          language,
-          category: category.id,
-          question,
-          selectedCards,
-        })
-        readingRef.current = reading
-        setReading(reading)
-        addConversation({ role: 'user', content: question || '일반 타로 리딩' })
-        addConversation({ role: 'assistant', content: reading })
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e)
-        if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-          setError('서버에 연결할 수 없어요.\n백엔드가 실행 중인지 확인해주세요.\n(cd backend && uvicorn main:app --port 5000)')
-        } else {
-          setError(msg)
+    // API 호출은 한 번만 (StrictMode 이중 실행 방지)
+    if (!calledRef.current) {
+      calledRef.current = true
+      const callApi = async () => {
+        try {
+          const reading = await fetchTarotReading({
+            character: persona.id,
+            language,
+            category: category.id,
+            question,
+            selectedCards,
+          })
+          readingRef.current = reading
+          setReading(reading)
+          addConversation({ role: 'user', content: question || '일반 타로 리딩' })
+          addConversation({ role: 'assistant', content: reading })
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e)
+          if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+            setError('서버에 연결할 수 없어요.\n백엔드가 실행 중인지 확인해주세요.\n(cd backend && uvicorn main:app --port 5000)')
+          } else {
+            setError(msg)
+          }
+        } finally {
+          setIsLoading(false)
         }
-      } finally {
-        setIsLoading(false)
       }
+      callApi()
     }
 
-    callApi()
-
-    // 카운트다운
+    // 카운트다운은 항상 실행 (StrictMode remount 시에도 재시작)
     let count = 3
+    setCountdown(3)
     const interval = setInterval(() => {
       count--
       setCountdown(count)
