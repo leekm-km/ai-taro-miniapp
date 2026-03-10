@@ -311,8 +311,8 @@ async def get_followup_reading(request: FollowUpRequest):
 6. **답변 구조 (반드시 아래 구분자 태그를 그대로 사용할 것)**:
 
    [INTRO]
-   - 추가 질문을 받았음을 언급하고, 새로운 카드 {len(request.selected_cards)}장을 뽑았음을 자연스럽게 말하세요 (100-150자)
-   - 이전 리딩과의 연결성을 언급하세요
+   - 자기소개 없이 바로 추가 질문에 대한 답변을 시작하세요 (50-100자)
+   - 이전 리딩과 자연스럽게 연결하며, 새 카드 {len(request.selected_cards)}장을 뽑았음을 간단히 언급하세요
 
 {card_section_prompts}
    [SUMMARY]

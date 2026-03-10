@@ -14,6 +14,7 @@ export default function FollowUpLoading() {
     conversationHistory,
     setFollowUpReading,
     setFollowUpMode,
+    addConversation,
   } = useApp()
   const calledRef = useRef(false)
 
@@ -36,6 +37,8 @@ export default function FollowUpLoading() {
           conversationHistory,
         })
         setFollowUpReading(reading)
+        addConversation({ role: 'user', content: followUpQuestion })
+        addConversation({ role: 'assistant', content: reading })
         setFollowUpMode(false)
         navigate('/follow-up-result')
       } catch (e) {

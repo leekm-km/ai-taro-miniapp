@@ -294,7 +294,7 @@ export default function Result() {
                 value={followUpText}
                 onChange={(e) => setFollowUpText(e.target.value)}
                 placeholder="추가 질문을 입력하세요..."
-                onKeyDown={(e) => e.key === 'Enter' && handleSendFollowUp()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSendFollowUp()}
                 style={{
                   flex: 1,
                   background: 'var(--bg-card)',
